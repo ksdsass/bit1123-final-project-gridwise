@@ -1,0 +1,18 @@
+# Compiled output
+out/
+*.class
+
+# Runtime data files created by the app
+grid_sources.csv
+simulation_report.txt
+
+# Report & slides contain personal data (NRIC) - submit via LMS only
+report/
+
+# Package files
+*.jar
+*.zip
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
