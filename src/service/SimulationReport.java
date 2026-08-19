@@ -38,6 +38,7 @@ public class SimulationReport {
             // merge() adds to the existing total for each type
             energyByType.merge("SOLAR", r.getSolarMW(), Double::sum);
             energyByType.merge("WIND", r.getWindMW(), Double::sum);
+            energyByType.merge("HYDRO", r.getHydroMW(), Double::sum);
             energyByType.merge("GAS", r.getGasMW(), Double::sum);
         }
     }
@@ -53,7 +54,8 @@ public class SimulationReport {
     /** Share of consumed energy that came from renewable sources. */
     public double getRenewableShare() {
         double renewable = energyByType.getOrDefault("SOLAR", 0.0)
-                         + energyByType.getOrDefault("WIND", 0.0);
+                         + energyByType.getOrDefault("WIND", 0.0)
+                         + energyByType.getOrDefault("HYDRO", 0.0);
         double supplied = renewable + energyByType.getOrDefault("GAS", 0.0);
         return supplied == 0 ? 0 : renewable / supplied;
     }

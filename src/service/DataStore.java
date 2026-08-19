@@ -11,6 +11,7 @@ import java.util.List;
 import model.EnergySource;
 import model.GasPlant;
 import model.HourlyRecord;
+import model.HydroPlant;
 import model.SolarFarm;
 import model.WindTurbine;
 
@@ -62,6 +63,9 @@ public class DataStore {
                     case "WIND":
                         sources.add(new WindTurbine(name, capacity));
                         break;
+                    case "HYDRO":
+                        sources.add(new HydroPlant(name, capacity));
+                        break;
                     case "GAS":
                         sources.add(new GasPlant(name, capacity));
                         break;
@@ -73,9 +77,12 @@ public class DataStore {
         return sources;
     }
 
-    /** Writes the full hourly table + summary to a text file. */
-    public void exportReport(SimulationReport report, String fileName)
-            throws IOException {
+    /**
+     * Writes the full hourly table + summary to a text file, showing
+     * the cost in the currency the user selected.
+     */
+    public void exportReport(SimulationReport report, String fileName,
+                             CurrencyConverter currency) throws IOException {
         try (BufferedWriter w = new BufferedWriter(new FileWriter(fileName))) {
             w.write("GridWise Simulation Report - " + report.getCity().getName());
             w.newLine();
@@ -83,18 +90,21 @@ public class DataStore {
                     report.getCity().getPeakDemandMW()));
             w.newLine();
             w.newLine();
-            w.write("Hour |  Demand |  Solar |   Wind |    Gas | Shortfall");
+            w.write("Hour |  Demand |  Solar |   Wind |  Hydro |    Gas | Shortfall");
             w.newLine();
-            w.write("-----+---------+--------+--------+--------+----------");
+            w.write("-----+---------+--------+--------+--------+--------+----------");
             w.newLine();
             for (HourlyRecord r : report.getRecords()) {
-                w.write(String.format("%02d:00| %7.1f | %6.1f | %6.1f | %6.1f | %8.1f",
+                w.write(String.format(
+                        "%02d:00| %7.1f | %6.1f | %6.1f | %6.1f | %6.1f | %8.1f",
                         r.getHour(), r.getDemandMW(), r.getSolarMW(),
-                        r.getWindMW(), r.getGasMW(), r.getShortfallMW()));
+                        r.getWindMW(), r.getHydroMW(), r.getGasMW(),
+                        r.getShortfallMW()));
                 w.newLine();
             }
             w.newLine();
-            w.write(String.format("Total cost   : RM %,.2f", report.getTotalCostRM()));
+            w.write("Total cost   : " + currency.formatExact(report.getTotalCostRM())
+                    + "  (" + currency.getActiveCode() + ")");
             w.newLine();
             w.write(String.format("Total CO2    : %.1f tonnes", report.getTotalCo2Tonnes()));
             w.newLine();

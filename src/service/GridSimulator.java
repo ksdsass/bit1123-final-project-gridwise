@@ -13,15 +13,16 @@ import model.HourlyRecord;
  *
  * For every hour of a simulated day it:
  *   1. asks the City how much power is needed,
- *   2. collects output from every renewable source FIRST
+ *   2. collects output from every weather-driven renewable FIRST
  *      (runtime polymorphism: one getOutputMW() call, each subclass
  *      answers with its own formula),
- *   3. turns up dispatchable (gas) plants only for what is missing,
- *   4. records any remaining shortfall as a blackout risk,
- *   5. accumulates cost and CO2 emissions.
+ *   3. releases hydro for the remaining gap (dispatchable AND clean),
+ *   4. turns up gas plants only for what is still missing,
+ *   5. records any remaining shortfall as a blackout risk,
+ *   6. accumulates cost and CO2 emissions.
  *
- * Renewables-first dispatch is the SDG 7 idea in code: the cheapest,
- * cleanest energy is always used before fossil fuel.
+ * The merit order (solar/wind -> hydro -> gas) is the SDG 7 idea in
+ * code: the cleanest, cheapest energy is always used first.
  */
 public class GridSimulator {
 
@@ -38,17 +39,21 @@ public class GridSimulator {
             // Wind strength for this hour: a base breeze plus random gusts
             double windFactor = 0.25 + 0.5 * random.nextDouble();
 
-            double solar = 0, wind = 0, gasAvailable = 0;
+            double solar = 0, wind = 0;
+            double hydroAvailable = 0, gasAvailable = 0;
             double cost = 0, co2 = 0;
 
-            // --- Step 1: renewables always generate first ---
+            // --- Step 1: weather-driven renewables generate first ---
             for (EnergySource source : sources) {
                 if (source.isDispatchable()) {
-                    gasAvailable += source.getCapacityMW();
+                    if (source.getType().equals("HYDRO")) {
+                        hydroAvailable += source.getCapacityMW();
+                    } else {
+                        gasAvailable += source.getCapacityMW();
+                    }
                     continue;
                 }
-                // Polymorphic call - SolarFarm and WindTurbine each
-                // calculate output their own way
+                // Polymorphic call - each subclass has its own formula
                 double output = source.getOutputMW(hour, windFactor);
                 if (source.getType().equals("SOLAR")) {
                     solar += output;
@@ -70,24 +75,56 @@ public class GridSimulator {
                 renewable = demand;
             }
 
-            // --- Step 2: gas covers only the remaining gap ---
+            // --- Step 2: hydro (clean + dispatchable) covers the gap ---
             double gap = demand - renewable;
-            double gasUsed = Math.min(gap, gasAvailable);
-            for (EnergySource source : sources) {
-                if (source.isDispatchable() && gasAvailable > 0) {
-                    double share = gasUsed * (source.getCapacityMW() / gasAvailable);
-                    cost += share * source.getCostPerMWh();
-                    co2 += share * source.getCo2PerMWh();
-                }
-            }
+            double hydroUsed = Math.min(gap, hydroAvailable);
+            cost += dispatchCost(sources, "HYDRO", hydroUsed, hydroAvailable);
+            co2 += dispatchCo2(sources, "HYDRO", hydroUsed, hydroAvailable);
+            gap -= hydroUsed;
 
-            // --- Step 3: whatever is still missing is a shortfall ---
-            double shortfall = Math.max(0, gap - gasUsed);
+            // --- Step 3: gas is the last resort ---
+            double gasUsed = Math.min(gap, gasAvailable);
+            cost += dispatchCost(sources, "GAS", gasUsed, gasAvailable);
+            co2 += dispatchCo2(sources, "GAS", gasUsed, gasAvailable);
+            gap -= gasUsed;
+
+            // --- Step 4: whatever is still missing is a shortfall ---
+            double shortfall = Math.max(0, gap);
 
             records.add(new HourlyRecord(hour, demand, solar, wind,
-                    gasUsed, shortfall, cost, co2));
+                    hydroUsed, gasUsed, shortfall, cost, co2));
         }
 
         return new SimulationReport(city, records);
+    }
+
+    /** Cost of the used dispatchable energy, shared by capacity. */
+    private double dispatchCost(List<EnergySource> sources, String type,
+                                double used, double available) {
+        if (used <= 0 || available <= 0) {
+            return 0;
+        }
+        double cost = 0;
+        for (EnergySource s : sources) {
+            if (s.isDispatchable() && s.getType().equals(type)) {
+                cost += used * (s.getCapacityMW() / available) * s.getCostPerMWh();
+            }
+        }
+        return cost;
+    }
+
+    /** CO2 of the used dispatchable energy, shared by capacity. */
+    private double dispatchCo2(List<EnergySource> sources, String type,
+                               double used, double available) {
+        if (used <= 0 || available <= 0) {
+            return 0;
+        }
+        double co2 = 0;
+        for (EnergySource s : sources) {
+            if (s.isDispatchable() && s.getType().equals(type)) {
+                co2 += used * (s.getCapacityMW() / available) * s.getCo2PerMWh();
+            }
+        }
+        return co2;
     }
 }
