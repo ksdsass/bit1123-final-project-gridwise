@@ -40,7 +40,7 @@ Every run models real grid behaviour:
 
 | Requirement | Where |
 | ----------- | ----- |
-| 6–8+ classes | 16 classes across 4 packages |
+| 6–8+ classes | 21 classes across 4 packages |
 | Encapsulation | Private fields + validated setters throughout `model` |
 | Inheritance | `EnergySource` → `SolarFarm`, `WindTurbine`, `HydroPlant`, `GasPlant`; UI classes extend `JFrame` / `JPanel` |
 | Polymorphism | `GridSimulator` calls `getOutputMW()` / `getCostPerMWh()` on `EnergySource` references; each subclass answers differently at runtime |
@@ -71,11 +71,23 @@ src/
 │   └── DataStore.java        CSV persistence + report export
 └── ui/
     ├── MainWindow.java       Frame, header, navigation, settings
-    ├── Theme.java            Light/dark palettes and components
+    ├── Theme.java            Light/dark palettes, rounded buttons/cards
     ├── AppLogo.java          Java 2D logo mark and window icon
+    ├── RoundedPanel.java     Card that paints its own rounded background
+    ├── CenteredPanel.java    Caps and centres the content width
     ├── SetupPanel.java       City + fleet management (JTable, forms)
     ├── SimulationPanel.java  Run button, stat cards, export
     └── ChartPanel.java       Custom-painted supply vs demand chart
+```
+
+## Running it in VS Code
+
+The repository includes `.vscode/launch.json` and `.vscode/tasks.json`.
+Press **F5** to run with the Java extension, or **Ctrl+Shift+B** to use the
+compile-and-run task. Both need a JDK: create `.vscode/settings.json` with
+
+```json
+{ "java.jdt.ls.java.home": "C:\\path\\to\\your\\jdk" }
 ```
 
 ## How to run
