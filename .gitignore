@@ -19,3 +19,8 @@ report/
 # JVM crash logs
 hs_err_pid*
 replay_pid*
+
+# Presentation build artefacts (the .pptx is committed; these are not)
+presentation/node_modules/
+presentation/*.pdf
+presentation/slide-*.jpg
