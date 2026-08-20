@@ -94,7 +94,7 @@ public class SetupPanel extends JPanel {
         JPanel tableCard = Theme.card("Energy sources");
         Theme.styleTable(table);
         JScrollPane scroll = new JScrollPane(table);
-        scroll.setBorder(BorderFactory.createLineBorder(Theme.border()));
+        scroll.setBorder(BorderFactory.createEmptyBorder());
         scroll.getViewport().setBackground(Theme.surface());
         scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
         tableCard.add(scroll);

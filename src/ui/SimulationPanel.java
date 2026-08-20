@@ -43,7 +43,7 @@ public class SimulationPanel extends JPanel {
     private JLabel blackoutValue = statValue("–");
     private JLabel costTitle;
     private JLabel adviceLabel = new JLabel("Run a simulation to get advice.");
-    private JPanel adviceBanner = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 10));
+    private RoundedPanel adviceBanner = new RoundedPanel(14);
 
     public SimulationPanel(SetupPanel setupPanel, CurrencyConverter currency) {
         this.setupPanel = setupPanel;
@@ -84,8 +84,7 @@ public class SimulationPanel extends JPanel {
         add(chartCard, BorderLayout.CENTER);
 
         // ---- Bottom: advice banner ----
-        adviceBanner.setBackground(Theme.surface());
-        adviceBanner.setBorder(BorderFactory.createLineBorder(Theme.border()));
+        adviceBanner.setLayout(new FlowLayout(FlowLayout.LEFT, 12, 11));
         adviceLabel.setFont(Theme.BOLD);
         adviceBanner.add(adviceLabel);
         add(adviceBanner, BorderLayout.SOUTH);
@@ -141,9 +140,8 @@ public class SimulationPanel extends JPanel {
 
         adviceLabel.setText(lastReport.getRecommendation());
         boolean trouble = lastReport.getBlackoutHours() > 0;
-        adviceBanner.setBackground(trouble ? Theme.dangerBg() : Theme.okBg());
+        adviceBanner.setFillColor(trouble ? Theme.dangerBg() : Theme.okBg());
         adviceLabel.setForeground(trouble ? Theme.danger() : Theme.accentDark());
-        adviceBanner.setBorder(BorderFactory.createLineBorder(Theme.border()));
     }
 
     private void exportReport() {

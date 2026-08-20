@@ -9,6 +9,9 @@ simulation_report.txt
 # Report & slides contain personal data (NRIC) - submit via LMS only
 report/
 
+# Machine-specific JDK path; launch.json and tasks.json are shared
+.vscode/settings.json
+
 # Package files
 *.jar
 *.zip

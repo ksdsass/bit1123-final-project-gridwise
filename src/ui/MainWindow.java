@@ -7,6 +7,7 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -18,10 +19,16 @@ import service.CurrencyConverter;
 /**
  * MainWindow - the application frame. It holds the dark header bar with
  * the GridWise logo, the display settings (currency and light/dark
- * mode) and the navigation buttons, plus a CardLayout body that swaps
+ * mode) and the navigation pills, plus a CardLayout body that swaps
  * between the Grid Setup and Simulation screens.
+ *
+ * The body is wrapped in a CenteredPanel so the content stays centred
+ * and readable instead of stretching across a wide monitor.
  */
 public class MainWindow extends JFrame {
+
+    /** Content is never wider than this, however large the window is. */
+    private static final int CONTENT_MAX_WIDTH = 1080;
 
     private CurrencyConverter currency = new CurrencyConverter();
 
@@ -30,19 +37,25 @@ public class MainWindow extends JFrame {
 
     private CardLayout cards = new CardLayout();
     private JPanel body = new JPanel(cards);
+    private CenteredPanel bodyWrapper;
 
     private JPanel header = new JPanel(new BorderLayout());
+    private JPanel headerContent = new JPanel(new BorderLayout());
     private JButton setupNav;
     private JButton simulationNav;
     private JButton themeToggle;
     private JComboBox<String> currencyBox = new JComboBox<>();
     private JLabel tagline = new JLabel("  City Energy Grid Simulator — SDG 7");
+    private JLabel currencyLabel = new JLabel("Currency:");
+
+    private boolean showingSetup = true;
 
     public MainWindow() {
         Theme.applyDefaults();
 
         setTitle("GridWise - City Energy Grid Simulator (SDG 7)");
-        setSize(1060, 700);
+        setSize(1160, 720);
+        setMinimumSize(new java.awt.Dimension(940, 620));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setIconImage(AppLogo.image(64));
@@ -50,17 +63,20 @@ public class MainWindow extends JFrame {
         buildHeader();
         add(header, BorderLayout.NORTH);
 
-        body.setBackground(Theme.bg());
+        body.setOpaque(false);
         body.add(setupPanel, "setup");
         body.add(simulationPanel, "simulation");
-        add(body, BorderLayout.CENTER);
+
+        bodyWrapper = new CenteredPanel(body, CONTENT_MAX_WIDTH, 0);
+        add(bodyWrapper, BorderLayout.CENTER);
 
         showSetup();
     }
 
     private void buildHeader() {
         header.setBackground(Theme.header());
-        header.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
+        header.setBorder(BorderFactory.createEmptyBorder(11, 0, 11, 0));
+        headerContent.setOpaque(false);
 
         // --- Left: logo mark + word mark ---
         JLabel logo = new JLabel("GridWise", AppLogo.icon(30), JLabel.LEFT);
@@ -74,10 +90,9 @@ public class MainWindow extends JFrame {
         left.setOpaque(false);
         left.add(logo);
         left.add(tagline);
-        header.add(left, BorderLayout.WEST);
+        headerContent.add(left, BorderLayout.WEST);
 
         // --- Right: currency, theme toggle, navigation ---
-        JLabel currencyLabel = new JLabel("Currency:");
         currencyLabel.setFont(Theme.SMALL);
         currencyLabel.setForeground(new Color(0x9A, 0xB0, 0xBD));
         for (String code : currency.getCodes()) {
@@ -85,41 +100,44 @@ public class MainWindow extends JFrame {
         }
         currencyBox.setSelectedItem(currency.getActiveCode());
         currencyBox.setFocusable(false);
+        currencyBox.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         currencyBox.addActionListener(e -> {
             currency.setActive((String) currencyBox.getSelectedItem());
             simulationPanel.refreshDisplay();
         });
 
-        themeToggle = new JButton();
-        themeToggle.setFont(Theme.BOLD);
-        themeToggle.setFocusPainted(false);
-        themeToggle.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
-        themeToggle.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        themeToggle = Theme.navButton(themeLabel());
         themeToggle.addActionListener(e -> toggleTheme());
 
-        setupNav = navButton("Grid Setup");
-        simulationNav = navButton("Simulation");
+        setupNav = Theme.navButton("Grid Setup");
+        simulationNav = Theme.navButton("Simulation");
+        // These listeners are what make the two screens switch
+        setupNav.addActionListener(e -> showSetup());
+        simulationNav.addActionListener(e -> showSimulation());
 
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         right.setOpaque(false);
         right.add(currencyLabel);
         right.add(currencyBox);
         right.add(themeToggle);
-        right.add(javax.swing.Box.createHorizontalStrut(10));
+        right.add(Box.createHorizontalStrut(14));
         right.add(setupNav);
         right.add(simulationNav);
-        header.add(right, BorderLayout.EAST);
+        headerContent.add(right, BorderLayout.EAST);
 
-        updateThemeToggleLabel();
+        // The header content lines up with the centred body content.
+        // paintBackground = false so the dark header bar stays visible.
+        header.add(new CenteredPanel(headerContent, CONTENT_MAX_WIDTH, 0, false) {
+            @Override
+            public java.awt.Dimension getPreferredSize() {
+                return new java.awt.Dimension(10,
+                        headerContent.getPreferredSize().height);
+            }
+        }, BorderLayout.CENTER);
     }
 
-    private JButton navButton(String text) {
-        JButton b = new JButton(text);
-        b.setFont(Theme.BOLD);
-        b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        b.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        return b;
+    private String themeLabel() {
+        return Theme.isDark() ? "Light mode" : "Dark mode";
     }
 
     /** Switches between light and dark mode and restyles everything. */
@@ -130,50 +148,36 @@ public class MainWindow extends JFrame {
     /** Applies the chosen mode and repaints the whole window. */
     public void setDarkMode(boolean darkMode) {
         Theme.setDark(darkMode);
-        updateThemeToggleLabel();
+        themeToggle.setText(themeLabel());
 
         header.setBackground(Theme.header());
-        body.setBackground(Theme.bg());
+        bodyWrapper.setBackground(Theme.bg());
         Theme.restyle(setupPanel);
         Theme.restyle(simulationPanel);
         // Re-applies the advice banner colours for the new mode
         simulationPanel.refreshDisplay();
-        setActive(cardIsSetup ? setupNav : simulationNav);
+        highlightActiveNav();
 
         revalidate();
         repaint();
     }
 
-    private void updateThemeToggleLabel() {
-        themeToggle.setText(Theme.isDark() ? "Light mode" : "Dark mode");
-        themeToggle.setBackground(new Color(0x2A, 0x38, 0x44));
-        themeToggle.setForeground(Color.WHITE);
-        themeToggle.setOpaque(true);
-        themeToggle.setBorderPainted(false);
-    }
-
-    private boolean cardIsSetup = true;
-
-    private void setActive(JButton active) {
-        for (JButton b : new JButton[] {setupNav, simulationNav}) {
-            boolean isActive = (b == active);
-            b.setBackground(isActive ? Theme.accent() : Theme.header());
-            b.setForeground(isActive ? Color.WHITE : new Color(0x9A, 0xB0, 0xBD));
-            b.setOpaque(true);
-            b.setBorderPainted(false);
-        }
+    private void highlightActiveNav() {
+        Theme.setActive(setupNav, showingSetup);
+        Theme.setActive(simulationNav, !showingSetup);
+        Theme.setActive(themeToggle, false);
     }
 
     public void showSetup() {
         cards.show(body, "setup");
-        cardIsSetup = true;
-        setActive(setupNav);
+        showingSetup = true;
+        highlightActiveNav();
     }
 
     public void showSimulation() {
         cards.show(body, "simulation");
-        cardIsSetup = false;
-        setActive(simulationNav);
+        showingSetup = false;
+        highlightActiveNav();
     }
 
     public SetupPanel getSetupPanel() {

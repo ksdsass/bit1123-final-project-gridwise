@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Compile GridWise",
+      "type": "shell",
+      "command": "${config:java.jdt.ls.java.home}\\bin\\javac.exe",
+      "args": [
+        "-d", "out",
+        "src/app/*.java", "src/model/*.java",
+        "src/service/*.java", "src/ui/*.java"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": ["$javac"],
+      "group": "build"
+    },
+    {
+      "label": "Run GridWise",
+      "type": "shell",
+      "command": "${config:java.jdt.ls.java.home}\\bin\\java.exe",
+      "args": ["-cp", "out", "app.Main"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "dependsOn": "Compile GridWise",
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    }
+  ]
+}
